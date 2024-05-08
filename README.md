@@ -1,3 +1,5 @@
+**Forked to add monero and bitcoin payment links in Markdown**
+
 <img src="etc/homepage.png">
 
 <br/>
