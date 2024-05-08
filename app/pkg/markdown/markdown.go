@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
@@ -13,18 +14,16 @@ import (
 )
 
 var (
-	moneroLinkRegex = regexp.MustCompile(`^monero:(\/\/)?([a-zA-Z0-9]{95})$`)
-	bitcoinLinkRegex = regexp.MustCompile(`^bitcoin:([a-zA-Z0-9]{34})$`)
+	moneroLinkRegex = regexp.MustCompile(`^monero:(\/\/)?([a-zA-Z0-9]{95})(\?(tx_amount|recipient_name|tx_description)=[^&]+((&tx_amount|&recipient_name|&tx_description)=[^&]+)*)*$`)
+	bitcoinLinkRegex = regexp.MustCompile(`^bitcoin:([a-zA-Z0-9]{26,35}|[a-zA-Z0-9]{42})(\?(amount|label|message)=[^&]+((&amount|&label|&message)=[^&]+)*)*$`)
 )
-
 
 func renderLink(w io.Writer, link *ast.Link, entering bool) {
 	if !entering {
 		w.Write([]byte(`</a>`))
 		return
 	}
-	w.Write([]byte(fmt.Sprintf(`<a href="%s" rel="noopener">`, link.Destination)))
-	html.EscapeHTML(w, link.Content)
+	w.Write([]byte(fmt.Sprintf(`<a href="%s" rel="noopener">%s`, link.Destination, string(link.Literal))))
 }
 
 func renderNodeHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
@@ -44,7 +43,7 @@ func renderNodeHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, 
 			return ast.GoToNext, false
 		}
 		renderLink(w, node, entering)
-		return ast.Terminate, true
+		return ast.GoToNext, true
 	}
 	return ast.GoToNext, false
 }
@@ -63,5 +62,5 @@ func Full(input string) template.HTML {
 			html.NofollowLinks |
 			html.NoreferrerLinks,
 	})
-	return template.HTML(string(markdown.ToHTML([]byte(input), parser, renderer)))
+	return template.HTML(strings.TrimSpace(string(markdown.ToHTML([]byte(input), parser, renderer))))
 }
